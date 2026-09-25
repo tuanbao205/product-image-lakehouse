@@ -1,0 +1,46 @@
+@"
+# =========================
+# Dataset
+# =========================
+
+# Product images are stored externally / MinIO
+data/raw/images/*
+!data/raw/images/.gitkeep
+
+# =========================
+# Environment & Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# =========================
+# Spark
+# =========================
+spark-warehouse/
+metastore_db/
+derby.log
+
+# =========================
+# Logs & Temp
+# =========================
+*.log
+tmp/
+temp/
+
+# =========================
+# IDE / OS
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+"@ | Set-Content .gitignore
