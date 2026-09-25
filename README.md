@@ -17,6 +17,7 @@ Mục tiêu của dự án là xây dựng Data Lakehouse để quản lý và p
 ## Dataset
 
 Dataset: Fashion Product Images (Small)
+link: https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-small?select=images
 
 Dữ liệu hiện tại:
 
