@@ -12,7 +12,7 @@ Mục tiêu của dự án là xây dựng Data Lakehouse để quản lý và p
 - Apache Spark - xử lý dữ liệu
 - Apache Iceberg - quản lý bảng Lakehouse
 - Parquet - định dạng lưu trữ dữ liệu
-- Docker - triển khai môi trường
+- Docker - triển khai môi trườngchmod +x ~/Downloads/mc
 
 ## Dataset
 

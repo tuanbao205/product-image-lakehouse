@@ -1,11 +1,17 @@
-@"
 # =========================
-# Dataset
+# Dataset & Data Files
 # =========================
-
-# Product images are stored externally / MinIO
+# Bỏ qua toàn bộ dữ liệu ảnh thô và dataset cục bộ
 data/raw/images/*
 !data/raw/images/.gitkeep
+data/images/*
+!data/images/.gitkeep
+data/archive/
+data/*.zip
+data/*.tar.gz
+
+# Cho phép các file CSV metadata (styles.csv, products.csv) được đẩy lên Git cho Người 2 làm việc
+!data/*.csv
 
 # =========================
 # Environment & Secrets
@@ -43,4 +49,8 @@ temp/
 .idea/
 .DS_Store
 Thumbs.db
-"@ | Set-Content .gitignore
+
+# =========================
+# MinIO system files
+# =========================
+.minio.sys/

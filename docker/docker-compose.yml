@@ -1,0 +1,9 @@
+
+
+# MinIO is running natively on macOS via Homebrew
+# Start with: minio server ./data
+# Web UI: http://127.0.0.1:9000
+# API: http://127.0.0.1:9000
+# Credentials: minioadmin / minioadmin
+
+services: {}
