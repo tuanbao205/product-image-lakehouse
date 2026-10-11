@@ -1,21 +1,16 @@
-# MinIO Configuration
-# NOTE: MinIO is running natively on macOS via Homebrew
-# The Docker Hub image 'minio/minio' is archived and no longer available
-# 
-# To start MinIO locally:
-#   mkdir -p ~/minio-data
-#   minio server ~/minio-data --console-address ":9001"
-#
-# Access:
-#   Web Console: http://127.0.0.1:9001
-#   API Endpoint: http://127.0.0.1:9000
-#   Credentials: minioadmin / minioadmin
-#
-# Bucket: product-images (created automatically during upload)
-
 services:
-  # Currently empty - all services run natively
-  # Future: Add Apache Spark, other ETL services here
-  placeholder:
-    image: alpine:latest
-    command: echo "MinIO and storage services are running natively on the host"
+  minio:
+    image: minio/minio:latest
+    container_name: product_lakehouse_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "admin"
+      MINIO_ROOT_PASSWORD: "password123"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  minio_data:
