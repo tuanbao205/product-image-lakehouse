@@ -10,12 +10,6 @@ data/archive/
 data/*.zip
 data/*.tar.gz
 
-# Generated lakehouse outputs
-data/bronze/
-data/silver/
-data/quarantine/
-data/etl_report.json
-
 # Cho phép các file CSV metadata (styles.csv, products.csv) được đẩy lên Git cho Người 2 làm việc
 !data/*.csv
 
