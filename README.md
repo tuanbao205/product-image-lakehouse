@@ -60,3 +60,29 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.path.style.access", "true") \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
     .getOrCreate()
+```
+
+## Spark ETL Người 2 (Bronze → Silver)
+
+ETL chạy cục bộ trước, không cần cấu hình S3A hay kết nối MinIO. Mặc định:
+
+- `products.csv`: metadata ảnh (các cột `image_id`, `product_id`, `object_path`, `size`, `format`, `width`, `height`, `upload_time`).
+- `data/styles.csv`: catalog sản phẩm (`id`, `productDisplayName`, `masterCategory`, `subCategory`).
+- Ảnh cục bộ tùy chọn: `data/raw/images/`; Pillow bổ sung metadata còn thiếu khi tên ảnh khớp `image_id`/`product_id` hoặc đường dẫn trong CSV.
+
+Cài thư viện và chạy từ thư mục gốc trên Windows:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r .\requirements.txt
+python .\spark\etl_bronze_to_silver.py
+python .\spark\validate_output.py
+```
+
+Trên Windows, cần JDK 17/21 và thư mục Hadoop local chứa `bin\winutils.exe`, `bin\hadoop.dll`. Nếu `JAVA_HOME`/`HADOOP_HOME` chưa có trong môi trường, script tự tìm JDK trong `C:\Program Files\Java` hoặc `C:\Program Files\Eclipse Adoptium` và Hadoop trong `%USERPROFILE%\.hadoop` hoặc `C:\hadoop`. Spark Python workers tự dùng đúng `.venv` hiện tại.
+
+Đầu ra là CSV nguồn và Parquet trong `data/bronze/products/`, `data/bronze/image_metadata/`, `data/bronze/object_info/`; Silver Parquet trong `data/silver/product_images/`; bản ghi lỗi/trùng trong `data/quarantine/product_images/`; và thống kê trong `data/etl_report.json`. Thư mục Parquet gồm một hoặc nhiều file `part-*.parquet`.
+
+Kích thước có đơn vị `B`, `KB`/`MB`/`GB` thập phân, `KiB`/`MiB`/`GiB` nhị phân; dữ liệu đầu ra được chuẩn hóa về byte. Quy tắc chọn bản ghi khi trùng `image_id`: `created_at` mới nhất, sau đó `image_path`, rồi `product_id`. JOIN dùng `product_id` với `styles.csv.id` sau khi trim chuỗi; bản ghi không khớp vẫn được giữ trong Silver, tên sản phẩm có thể NULL, và được đếm riêng trong báo cáo để không làm mất dữ liệu âm thầm.
+
+Có thể thay đường dẫn mặc định bằng `IMAGE_METADATA_CSV`, `PRODUCT_CATALOG_CSV`, `LOCAL_IMAGE_DIR`, `LAKEHOUSE_DATA_DIR` hoặc đặt Spark master qua `SPARK_MASTER`.
