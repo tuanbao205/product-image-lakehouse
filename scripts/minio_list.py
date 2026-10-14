@@ -1,16 +1,10 @@
-import boto3
-from botocore.client import Config
+try:
+    from minio_config import MINIO_BUCKET, create_s3_client
+except ImportError:
+    from scripts.minio_config import MINIO_BUCKET, create_s3_client
 
-s3_client = boto3.client(
-    "s3",
-    endpoint_url="http://localhost:9000",
-    aws_access_key_id="admin",
-    aws_secret_access_key="password123",
-    config=Config(signature_version="s3v4"),
-    region_name="us-east-1"
-)
-
-response = s3_client.list_objects_v2(Bucket="product-images", MaxKeys=10)
+s3_client = create_s3_client()
+response = s3_client.list_objects_v2(Bucket=MINIO_BUCKET, Prefix="raw/", MaxKeys=10)
 print("Danh sách các object trong MinIO:")
 for obj in response.get('Contents', []):
     print(f"- {obj['Key']} ({obj['Size']} bytes, Last Modified: {obj['LastModified']})")

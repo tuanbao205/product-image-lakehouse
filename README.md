@@ -11,17 +11,20 @@ Mục tiêu của dự án là xây dựng Data Lakehouse để quản lý và p
 - **Parquet** - Định dạng lưu trữ dữ liệu tối ưu
 - **Docker / Native Services** - Triển khai môi trường hạ tầng
 
-## Trạng thái triển khai (Người 1 — Hoàn thành 100%)
-- **Hệ thống Object Storage (MinIO):** Đã khởi chạy thành công, sẵn sàng cung cấp S3 API.
-- **Bucket & Dataset:** Đã khởi tạo bucket `product-images` và chuẩn bị đầy đủ bộ dataset ảnh sản phẩm cùng file metadata (`styles.csv` / `products.csv`).
-- **Kiểm thử CRUD:** Đã kiểm tra toàn diện các chức năng Upload, List, Download, Delete thông qua `boto3` và đảm bảo hoạt động hoàn hảo.
+## Trạng thái triển khai
+- Dataset Fashion thật nằm trong `data/raw/images/`; catalog nằm trong `data/styles.csv`.
+- Đã upload và kiểm tra đủ 44,441 object trong bucket `product-images` theo key `raw/<tên-file>`.
+- `products.csv` đã được tạo lại từ metadata thật của ảnh; mỗi ID trong manifest khớp với catalog.
+- Spark Bronze → Silver đã chạy và được validator xác nhận tại `data/lakehouse_real/`: 44,441 dòng Silver, 0 dòng quarantine, 44,441 dòng join được với catalog. Các output cũ trong `data/bronze/`, `data/silver/` và `data/quarantine/` được giữ nguyên.
+- MinIO CRUD smoke test đã pass: upload, list, download, so sánh bytes và xóa object test tạm.
 
 ## Dataset
 - **Dataset:** Fashion Product Images (Small)
 - **Link tải:** [Kaggle Dataset](https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-small?select=images)
 - **Thống kê dữ liệu:**
   - 44,446 bản ghi metadata trong `styles.csv`
-  - 44,441 ảnh sản phẩm thực tế đã được chuẩn bị trên hệ thống lưu trữ.
+  - 44,441 file ảnh JPEG có trong `data/raw/images/`.
+  - Tên cả 44,441 file hiện khớp với ID trong catalog; 5 sản phẩm trong catalog không có ảnh.
 
 ## Kiến trúc dự kiến
 Dataset 
@@ -41,47 +44,54 @@ product-image-lakehouse/
 
 ---
 
-##  Hướng dẫn kết nối MinIO dành cho Người 2 & Người 3
-Kho Object Storage (MinIO) của hạ tầng đang chạy tại máy cục bộ với thông số cấu hình tiêu chuẩn sau:
-- **S3 API Endpoint:** `http://localhost:9000`
-- **MinIO Web Console:** `http://localhost:9001`
-- **Access Key:** `minioadmin`
-- **Secret Key:** `minioadmin`
-- **Bucket chính:** `product-images`
+## MinIO và nạp dataset
 
-### Mẫu cấu hình Spark kết nối MinIO (dành cho Người 2):
-```python
-spark = SparkSession.builder \
-    .appName("ProductImage_Lakehouse_ETL") \
-    .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262") \
-    .config("spark.hadoop.fs.s3a.endpoint", "[http://127.0.0.1:9000](http://127.0.0.1:9000)") \
-    .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
-    .getOrCreate()
+Docker Compose hiện chỉ chạy MinIO; Spark ETL chạy cục bộ. Các script MinIO dùng chung cấu hình trong `scripts/minio_config.py`:
+
+- S3 API: `http://localhost:9000`
+- Web Console: `http://localhost:9001`
+- Bucket: `product-images`
+- Thông tin đăng nhập phát triển mặc định: `admin` / `password123`.
+
+Có thể đặt `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` và `MINIO_BUCKET` trong môi trường trước khi chạy Docker Compose hoặc các script. Nếu đổi credentials, cần dùng cùng giá trị khi khởi tạo MinIO và khi chạy script. Không dùng credentials mặc định cho môi trường chia sẻ hoặc production.
+
+Chạy từ thư mục gốc trên Windows:
+
+```powershell
+docker compose -f .\docker\docker-compose.yml up -d
+.\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
+.\.venv\Scripts\python.exe .\scripts\upload_dataset_to_minio.py --dry-run
+.\.venv\Scripts\python.exe .\scripts\upload_dataset_to_minio.py
+.\.venv\Scripts\python.exe .\scripts\test_crud.py
 ```
+
+`--dry-run` chỉ kiểm tra ảnh, định dạng và việc khớp ID với catalog; không kết nối MinIO, không upload và không tạo manifest. Lệnh upload thật đẩy ảnh theo key `raw/<đường-dẫn-tương-đối>`; với bộ ảnh hiện tại, ví dụ `raw/10000.jpg`. Sau khi upload thành công, script ghi metadata ảnh thật vào `products.csv`. Các trường `product_id` và `image_id` lấy từ tên file, còn `product_name`/`category` lấy từ `styles.csv`. Ảnh lỗi, không khớp catalog hoặc upload thất bại được báo riêng và làm lệnh trả về mã lỗi; manifest chỉ chứa object upload thành công.
+
+Các script `minio_list.py` và `minio_download.py` là ví dụ thao tác thủ công; script download lấy `raw/10000.jpg`. Script xóa yêu cầu truyền key cụ thể, ví dụ `.\.venv\Scripts\python.exe .\scripts\minio_delete.py --key raw/10000.jpg`; dùng cẩn thận vì thao tác này xóa object thật.
 
 ## Spark ETL Người 2 (Bronze → Silver)
 
-ETL chạy cục bộ trước, không cần cấu hình S3A hay kết nối MinIO. Mặc định:
+ETL chạy cục bộ và đọc manifest CSV được sinh sau bước upload; Spark chưa đọc object trực tiếp từ MinIO ở giai đoạn này. Mặc định:
 
-- `products.csv`: metadata ảnh (các cột `image_id`, `product_id`, `object_path`, `size`, `format`, `width`, `height`, `upload_time`).
+- `products.csv`: manifest ảnh thật (`image_id`, `product_id`, `product_name`, `category`, `object_path`, `image_size`, `format`, `width`, `height`, `upload_time`).
 - `data/styles.csv`: catalog sản phẩm (`id`, `productDisplayName`, `masterCategory`, `subCategory`).
-- Ảnh cục bộ tùy chọn: `data/raw/images/`; Pillow bổ sung metadata còn thiếu khi tên ảnh khớp `image_id`/`product_id` hoặc đường dẫn trong CSV.
+- `object_path` là key trong bucket `product-images`, chẳng hạn `raw/10000.jpg`; cột này được giữ trong Silver dưới tên `image_path`.
+- Cả kích thước, định dạng và độ phân giải đều được đọc từ file ảnh thật bằng Pillow; không dùng các giá trị ngẫu nhiên từ script demo cũ.
 
 Cài thư viện và chạy từ thư mục gốc trên Windows:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r .\requirements.txt
+$env:LAKEHOUSE_DATA_DIR = (Join-Path $PWD "data\lakehouse_real")
+$env:PRODUCT_CATALOG_CSV = (Join-Path $PWD "data\styles.csv")
 python .\spark\etl_bronze_to_silver.py
 python .\spark\validate_output.py
 ```
 
 Trên Windows, cần JDK 17/21 và thư mục Hadoop local chứa `bin\winutils.exe`, `bin\hadoop.dll`. Nếu `JAVA_HOME`/`HADOOP_HOME` chưa có trong môi trường, script tự tìm JDK trong `C:\Program Files\Java` hoặc `C:\Program Files\Eclipse Adoptium` và Hadoop trong `%USERPROFILE%\.hadoop` hoặc `C:\hadoop`. Spark Python workers tự dùng đúng `.venv` hiện tại.
 
-Đầu ra là CSV nguồn và Parquet trong `data/bronze/products/`, `data/bronze/image_metadata/`, `data/bronze/object_info/`; Silver Parquet trong `data/silver/product_images/`; bản ghi lỗi/trùng trong `data/quarantine/product_images/`; và thống kê trong `data/etl_report.json`. Thư mục Parquet gồm một hoặc nhiều file `part-*.parquet`.
+Với các biến môi trường trong lệnh trên, Bronze Parquet/CSV nằm trong `data/lakehouse_real/bronze/`, Silver Parquet nằm trong `data/lakehouse_real/silver/product_images/`, quarantine nằm trong `data/lakehouse_real/quarantine/product_images/`, và thống kê nằm trong `data/lakehouse_real/etl_report.json`. Nếu không đặt `LAKEHOUSE_DATA_DIR`, ETL dùng `data/` làm output root. Silver giữ lại ảnh không khớp catalog nhưng đếm riêng trong báo cáo; với dataset hiện tại, ID file đã được xác nhận khớp catalog. Thư mục Parquet gồm một hoặc nhiều file `part-*.parquet`.
 
 Kích thước có đơn vị `B`, `KB`/`MB`/`GB` thập phân, `KiB`/`MiB`/`GiB` nhị phân; dữ liệu đầu ra được chuẩn hóa về byte. Quy tắc chọn bản ghi khi trùng `image_id`: `created_at` mới nhất, sau đó `image_path`, rồi `product_id`. JOIN dùng `product_id` với `styles.csv.id` sau khi trim chuỗi; bản ghi không khớp vẫn được giữ trong Silver, tên sản phẩm có thể NULL, và được đếm riêng trong báo cáo để không làm mất dữ liệu âm thầm.
 

@@ -224,6 +224,8 @@ def _normalize_metadata(
     height = F.regexp_extract(height_text, r"^([0-9]+)$", 1).try_cast("int")
     upload_time = _source_column(raw, "upload_time")
     created_at = F.coalesce(
+        F.try_to_timestamp(upload_time, F.lit("yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX")),
+        F.try_to_timestamp(upload_time, F.lit("yyyy-MM-dd'T'HH:mm:ss.SSSSSSX")),
         F.try_to_timestamp(upload_time, F.lit("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")),
         F.try_to_timestamp(upload_time, F.lit("yyyy-MM-dd'T'HH:mm:ssXXX")),
         F.try_to_timestamp(upload_time, F.lit("yyyy-MM-dd'T'HH:mm:ssX")),

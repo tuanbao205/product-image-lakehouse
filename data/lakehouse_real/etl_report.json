@@ -1,13 +1,13 @@
 {
   "metadata_source": "products.csv",
   "catalog_source": "data\\styles.csv",
-  "input_records": 150,
+  "input_records": 44441,
   "invalid_records": 0,
   "duplicate_records": 0,
   "quarantined_records": 0,
-  "silver_records": 150,
-  "matched_product_records": 0,
-  "unmatched_product_records": 150,
+  "silver_records": 44441,
+  "matched_product_records": 44441,
+  "unmatched_product_records": 0,
   "join_keys": "image_metadata.product_id = catalog.id (trimmed strings)",
   "size_unit": "bytes; decimal KB/MB/GB and binary KiB/MiB/GiB",
   "duplicate_priority": "newest created_at, then image_path, then product_id"

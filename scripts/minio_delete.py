@@ -1,15 +1,22 @@
-import boto3
-from botocore.client.config import Config
+import argparse
 
-s3_client = boto3.client(
-    "s3",
-    endpoint_url="http://localhost:9000",
-    aws_access_key_id="admin",
-    aws_secret_access_key="password123",
-    config=Config(signature_version="s3v4"),
-    region_name="us-east-1"
-)
+try:
+    from minio_config import MINIO_BUCKET, create_s3_client
+except ImportError:
+    from scripts.minio_config import MINIO_BUCKET, create_s3_client
 
-# Ví dụ xóa một object trên MinIO
-s3_client.delete_object(Bucket="product-images", Key="raw/1591.jpg")
-print("Đã xóa object thành công trên MinIO!")
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Delete an object from MinIO.")
+    parser.add_argument(
+        "--key",
+        required=True,
+        help="Exact object key to delete, for example raw/10000.jpg.",
+    )
+    object_key = parser.parse_args().key
+    create_s3_client().delete_object(Bucket=MINIO_BUCKET, Key=object_key)
+    print(f"Deleted object: {object_key}")
+
+
+if __name__ == "__main__":
+    main()

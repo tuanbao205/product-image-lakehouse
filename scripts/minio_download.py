@@ -1,15 +1,10 @@
-import boto3
-from botocore.client import Config
+try:
+    from minio_config import MINIO_BUCKET, create_s3_client
+except ImportError:
+    from scripts.minio_config import MINIO_BUCKET, create_s3_client
 
-s3_client = boto3.client(
-    "s3",
-    endpoint_url="http://localhost:9000",
-    aws_access_key_id="admin",
-    aws_secret_access_key="password123",
-    config=Config(signature_version="s3v4"),
-    region_name="us-east-1"
-)
+s3_client = create_s3_client()
 
 # Ví dụ download một ảnh từ MinIO về máy local
-s3_client.download_file("product-images", "raw/1591.jpg", "downloaded_sample.jpg")
+s3_client.download_file(MINIO_BUCKET, "raw/10000.jpg", "downloaded_sample.jpg")
 print("Đã download file thành công về máy local!")
