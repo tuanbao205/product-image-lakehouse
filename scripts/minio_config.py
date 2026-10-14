@@ -10,6 +10,7 @@ MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", "http://localhost:9000")
 MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "admin")
 MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "password123")
 MINIO_BUCKET = os.environ.get("MINIO_BUCKET", "product-images")
+MINIO_REGION = os.environ.get("MINIO_REGION", "us-east-1")
 
 
 def create_s3_client() -> Any:
@@ -19,7 +20,7 @@ def create_s3_client() -> Any:
         aws_access_key_id=MINIO_ACCESS_KEY,
         aws_secret_access_key=MINIO_SECRET_KEY,
         config=Config(signature_version="s3v4", max_pool_connections=16),
-        region_name="us-east-1",
+        region_name=MINIO_REGION,
     )
 
 

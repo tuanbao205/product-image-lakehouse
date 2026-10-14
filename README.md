@@ -96,3 +96,16 @@ Với các biến môi trường trong lệnh trên, Bronze Parquet/CSV nằm tr
 Kích thước có đơn vị `B`, `KB`/`MB`/`GB` thập phân, `KiB`/`MiB`/`GiB` nhị phân; dữ liệu đầu ra được chuẩn hóa về byte. Quy tắc chọn bản ghi khi trùng `image_id`: `created_at` mới nhất, sau đó `image_path`, rồi `product_id`. JOIN dùng `product_id` với `styles.csv.id` sau khi trim chuỗi; bản ghi không khớp vẫn được giữ trong Silver, tên sản phẩm có thể NULL, và được đếm riêng trong báo cáo để không làm mất dữ liệu âm thầm.
 
 Có thể thay đường dẫn mặc định bằng `IMAGE_METADATA_CSV`, `PRODUCT_CATALOG_CSV`, `LOCAL_IMAGE_DIR`, `LAKEHOUSE_DATA_DIR` hoặc đặt Spark master qua `SPARK_MASTER`.
+
+## Spark – Iceberg trên MinIO (Người 3)
+
+Spark và Iceberg dùng cùng cấu hình MinIO trong `scripts/minio_config.py`. Runtime đang ghim theo phiên bản PySpark của project: Spark `4.0.1`, Scala `2.13`, Iceberg runtime `1.12.0`, Hadoop/S3A `3.4.1`. Iceberg Hadoop Catalog lưu cả dữ liệu bảng và metadata trong warehouse `s3a://product-images/warehouse/`; MinIO dùng S3 path-style access.
+
+Khởi động MinIO rồi kiểm tra cấu hình bằng một bảng tạm: lệnh tạo namespace/table ngẫu nhiên, ghi/đọc một dòng qua Iceberg rồi xóa bảng với `PURGE`.
+
+```powershell
+docker compose -f .\docker\docker-compose.yml up -d
+.\.venv\Scripts\python.exe .\spark\validate_iceberg_minio.py
+```
+
+Lệnh kiểm tra tải các JAR Maven ở lần chạy đầu; cần truy cập Maven Central. Cấu hình phiên Spark có thể được dùng trong job qua `create_iceberg_spark_session()` từ `spark/iceberg_session.py`. Có thể tùy chỉnh `ICEBERG_CATALOG`, `ICEBERG_WAREHOUSE`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MINIO_REGION` và `SPARK_MASTER` bằng environment variables. `ICEBERG_WAREHOUSE` mặc định là `s3a://<MINIO_BUCKET>/warehouse/`.
