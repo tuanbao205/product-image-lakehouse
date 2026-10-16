@@ -11,8 +11,14 @@ except ImportError:
         create_iceberg_spark_session,
     )
 
+try:
+    from scripts.minio_config import MINIO_BUCKET, create_s3_client, ensure_bucket
+except ImportError:
+    from minio_config import MINIO_BUCKET, create_s3_client, ensure_bucket
+
 
 def validate_iceberg_minio() -> None:
+    ensure_bucket(create_s3_client(), MINIO_BUCKET)
     spark = create_iceberg_spark_session("ProductImage_IcebergMinIO_Check")
     namespace = f"_connection_check_{uuid.uuid4().hex[:12]}"
     table = f"{ICEBERG_CATALOG}.{namespace}.probe"
@@ -41,6 +47,10 @@ def validate_iceberg_minio() -> None:
             raise AssertionError(f"Unexpected Iceberg table contents: {rows}")
 
         print(f"Iceberg catalog '{ICEBERG_CATALOG}' is connected.")
+        warehouse = spark.conf.get(
+            f"spark.sql.catalog.{ICEBERG_CATALOG}.warehouse"
+        )
+        print(f"Iceberg warehouse: {warehouse}")
         print("S3A write/read to the MinIO warehouse passed.")
     finally:
         if table_created:

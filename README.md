@@ -109,3 +109,50 @@ docker compose -f .\docker\docker-compose.yml up -d
 ```
 
 Lệnh kiểm tra tải các JAR Maven ở lần chạy đầu; cần truy cập Maven Central. Cấu hình phiên Spark có thể được dùng trong job qua `create_iceberg_spark_session()` từ `spark/iceberg_session.py`. Có thể tùy chỉnh `ICEBERG_CATALOG`, `ICEBERG_WAREHOUSE`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MINIO_REGION` và `SPARK_MASTER` bằng environment variables. `ICEBERG_WAREHOUSE` mặc định là `s3a://<MINIO_BUCKET>/warehouse/`.
+
+Để nạp Silver Parquet của dataset đã upload lên Iceberg, chạy:
+
+```powershell
+.\.venv\Scripts\python.exe .\spark\load_silver_to_iceberg.py
+```
+
+Job đọc `data/lakehouse_real/silver/product_images/`, kiểm tra báo cáo ETL và yêu cầu đúng 44.441 dòng trước khi ghi bảng `lakehouse.silver.product_images`. Sau đó đọc lại bảng Iceberg và xác nhận lại số dòng. Nếu bảng đã tồn tại, lần chạy mới sẽ thay thế bảng bằng Silver hiện tại. Có thể đặt `SILVER_PARQUET_PATH` để dùng đường dẫn Silver khác; job vẫn yêu cầu báo cáo ETL trong `LAKEHOUSE_DATA_DIR` (mặc định `data/lakehouse_real`).
+
+### Tạo Gold tables
+
+Sau khi đã có bảng Silver Iceberg, tạo các bảng tổng hợp Gold bằng:
+
+```powershell
+.\.venv\Scripts\python.exe .\spark\build_gold_tables.py
+```
+
+Job tạo hoặc thay thế `lakehouse.gold.category_image_stats` (số ảnh và tổng dung lượng byte theo danh mục) và `lakehouse.gold.image_format_stats` (số ảnh theo định dạng). Job đọc lại cả hai bảng, kiểm tra chúng khớp với kết quả tổng hợp và đối chiếu tổng số ảnh/số byte với Silver. Danh mục hoặc định dạng bị thiếu được gom vào `UNKNOWN`; định dạng `JPEG` được chuẩn hóa thành `JPG`.
+
+### Snapshot, Time Travel và Schema Evolution
+
+Để demo an toàn, job làm việc trên bảng riêng `lakehouse.silver.product_images_evolution_demo`; bảng Silver nguồn không bị sửa. Job tạo snapshot cơ sở từ Silver, thêm cột `aspect_ratio` kiểu `DOUBLE` bằng `ALTER TABLE ... ADD COLUMN`, rồi tính tỷ lệ chiều rộng trên chiều cao. Nó đọc lại snapshot cũ theo ID, đối chiếu số dòng và hiển thị snapshot/schema trước và sau thay đổi.
+
+```powershell
+.\.venv\Scripts\python.exe .\spark\demo_iceberg_evolution.py
+```
+
+Trong đầu ra, dùng ID snapshot cơ sở được in ra để truy vấn dữ liệu trước khi thêm cột:
+
+```sql
+SELECT image_id, width, height
+FROM lakehouse.silver.product_images_evolution_demo
+VERSION AS OF <BASELINE_SNAPSHOT_ID>;
+```
+
+Để xem schema và các giá trị mới nhất:
+
+```sql
+SELECT image_id, width, height, aspect_ratio
+FROM lakehouse.silver.product_images_evolution_demo;
+
+SELECT snapshot_id, committed_at, operation
+FROM lakehouse.silver.product_images_evolution_demo.snapshots
+ORDER BY committed_at, snapshot_id;
+```
+
+Mỗi lần chạy thay thế dữ liệu trong bảng demo cô lập bằng Silver hiện tại để tạo snapshot cơ sở nhất quán; job không thay thế hay sửa `lakehouse.silver.product_images`.
