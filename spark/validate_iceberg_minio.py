@@ -38,9 +38,7 @@ def validate_iceberg_minio() -> None:
             """
         )
         table_created = True
-        spark.createDataFrame([(1, "minio-iceberg-ok")], ["id", "label"]).writeTo(
-            table
-        ).append()
+        spark.sql(f"INSERT INTO {table} VALUES (1, 'minio-iceberg-ok')")
 
         rows = spark.table(table).collect()
         if len(rows) != 1 or rows[0]["id"] != 1 or rows[0]["label"] != "minio-iceberg-ok":
