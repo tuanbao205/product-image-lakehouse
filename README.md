@@ -1,4 +1,4 @@
-﻿# Product Image Lakehouse
+# Product Image Lakehouse
 
 ## Giới thiệu
 Product Image Lakehouse là bài tập lớn môn Tích hợp và Phân tích Dữ liệu lớn.
@@ -156,3 +156,26 @@ ORDER BY committed_at, snapshot_id;
 ```
 
 Mỗi lần chạy thay thế dữ liệu trong bảng demo cô lập bằng Silver hiện tại để tạo snapshot cơ sở nhất quán; job không thay thế hay sửa `lakehouse.silver.product_images`.
+
+---
+
+## Demo & Trực quan hóa
+
+### 1. Trực quan hóa qua Streamlit Web Dashboard
+
+Dự án cung cấp giao diện Web Dashboard trực quan tích hợp đầy đủ các tầng từ MinIO đến Iceberg:
+
+```powershell
+.\.venv\Scripts\streamlit.exe run dashboard.py
+```
+
+Dashboard hỗ trợ:
+- **Hàng KPI:** Tổng số lượng ảnh (`44,441`), dung lượng (`541.5 MB`), số danh mục, tỉ lệ khớp catalog (100%).
+- **Tầng Gold (BI):** Biểu đồ tương tác số lượng ảnh và dung lượng lưu trữ theo từng danh mục sản phẩm.
+- **MinIO Image Explorer:** Lọc theo danh mục, tìm kiếm theo tên và hiển thị ảnh sản phẩm thật tải trực tiếp từ MinIO qua S3 API.
+- **Kiến trúc Lakehouse:** Tóm tắt mô hình Medallion và câu lệnh minh họa Schema Evolution / Time Travel.
+
+### 2. Demo từng bước qua Jupyter Notebook
+
+Chạy file notebook:
+👉 `notebooks/demo_lakehouse.ipynb` (sử dụng kernel `.venv`).
